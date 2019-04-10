@@ -129,11 +129,11 @@ function createContentForRoot(children, iconUri) {
   };
 }
 
-function createContentForCategory(category, iconUri) {
+function createContentForCategory(category, iconUri, prefix) {
   return {
     embed: {
       title: `Settings (${category.userFacingName})`,
-      description: CATEGORY_DESCRIPTION,
+      description: (category.description || CATEGORY_DESCRIPTION).replace(/<prefix>/g, prefix),
       fields: createFieldsForChildren(category.children),
       color: EMBED_COLOR,
       footer: {
@@ -642,7 +642,8 @@ function showRoot(monochrome, msg) {
 
 function showCategory(monochrome, msg, category) {
   const iconUri = monochrome.getSettingsIconUri();
-  const categoryContent = createContentForCategory(category, iconUri);
+  const prefix = monochrome.getPersistence().getPrimaryPrefixForMessage(msg);
+  const categoryContent = createContentForCategory(category, iconUri, prefix);
   const hook = Hook.registerHook(
     msg.author.id, msg.channel.id,
     (cbHook, cbMsg) => handleCategoryViewMsg(
