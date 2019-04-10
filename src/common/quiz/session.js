@@ -65,7 +65,7 @@ class SessionInformation {
   static async createFromSaveData(locationId, saveData, scoreScopeId, messageSender) {
     let session = new SessionInformation();
     let deckCollection = await DeckCollection.createFromSaveData(saveData.deckCollectionSaveData);
-    let gameMode = gameModes.find(mode => mode.serializationIdentifier === saveData.gameModeIdentifier);
+    let gameMode = gameModes.find(mode => mode.key === saveData.gameModeIdentifier);
 
     session.deckCollection_ = deckCollection;
     session.messageSender_ = messageSender;
@@ -165,7 +165,7 @@ class SessionInformation {
       deckCollectionSaveData: this.deckCollection_.createSaveData(),
       scoresSaveData: this.scores_.createSaveData(),
       unansweredQuestionsInARow: this.getUnansweredQuestionsInARow(),
-      gameModeIdentifier: this.gameMode_.serializationIdentifier,
+      gameModeIdentifier: this.gameMode_.key,
       settings: this.getSettings(),
       ownerId: this.getOwnerId(),
       startTime: this.startTime_,
@@ -180,7 +180,7 @@ class SessionInformation {
   }
 
   getGameModeIdentifier() {
-    return this.gameMode_.serializationIdentifier;
+    return this.gameMode_.key;
   }
 
   getScores() {

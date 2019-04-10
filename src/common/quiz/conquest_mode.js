@@ -69,7 +69,7 @@ function parseUserOverrides(settingsOverrides) {
 }
 
 module.exports = {
-  serializationIdentifier: 'CONQUEST',
+  key: 'CONQUEST',
   questionLimitOverride: new SettingsOverride(Number.MAX_SAFE_INTEGER, true, true),
   unansweredQuestionLimitOverride: new SettingsOverride(5, true, true),
   answerTimeLimitOverride: new SettingsOverride(16000, true, false, 4000, 120000),

@@ -20,6 +20,7 @@ if (!state.quizManager) {
   state.quizManager = {
     currentActionForLocationId: {},
     sessionForLocationId: {},
+    messageSenderForLocationId: {},
   };
 }
 
@@ -30,19 +31,26 @@ function closeSession(session, gameOver) {
     return Promise.resolve();
   }
 
-  let locationId = session.getLocationId();
+  let locationId = session.LocationId;
 
   delete state.quizManager.sessionForLocationId[locationId];
+  delete state.quizManager.messageSenderForLocationId[locationId];
   delete state.quizManager.currentActionForLocationId[locationId];
-  return Promise.resolve(session.finalize(gameOver));
+
+  // TODO: Create review decks, commit scores
+  if (gameOver) {
+    
+  }
+
+  return Promise.resolve(session);
 }
 
-async function endQuiz(gameOver, session, notifier, notifyDelegate, delegateFinalArgument) {
+async function endQuiz(session, notifier, notifyDelegate, delegateArgument) {
   if (!session) {
     return Promise.resolve();
   }
 
-  let locationId = session.getLocationId();
+  let locationId = session.locationId;
   if (state.quizManager.currentActionForLocationId[locationId]) {
     if (state.quizManager.currentActionForLocationId[locationId].stop) {
       state.quizManager.currentActionForLocationId[locationId].stop();
@@ -53,14 +61,7 @@ async function endQuiz(gameOver, session, notifier, notifyDelegate, delegateFina
   try {
     await closeSession(session, true);
     await retryPromise(() => {
-      return Promise.resolve(notifyDelegate.call(
-        notifier,
-        session.getName(),
-        session.getScoresForUserPairs(),
-        session.getUnansweredCards(),
-        session.createAggregateUnansweredCardsLink(),
-        session.getDidCreateReviewDecks(),
-        delegateFinalArgument));
+      return Promise.resolve(notifyDelegate.call(notifier, session, delegateArgument));
     }, 3);
   } catch (err) {
     globals.logger.logFailure(LOGGER_TITLE, 'Error ending quiz. Continuing and closing session.', err);
@@ -72,9 +73,9 @@ function stopAllQuizzesCommand() {
   let promise = Promise.resolve();
   for (let locationId of allLocationIds) {
     let session = state.quizManager.sessionForLocationId[locationId];
-    let messageSender = session.getMessageSender();
+    let messageSender = state.quizManager.messageSenderForLocationId[locationId];
     promise = promise.then(() => {
-      return endQuiz(true, session, messageSender, messageSender.notifyStoppingAllQuizzes);
+      return endQuiz(session, messageSender, messageSender.notifyStoppingAllQuizzes);
     }).catch(err => {
       globals.logger.logFailure(LOGGER_TITLE, 'Failed to send quiz stop message to location ID ' + locationId, err);
     });
@@ -87,12 +88,9 @@ function stopQuizCommand(locationId, cancelingUserId, cancelingUserIsAdmin) {
   let session = state.quizManager.sessionForLocationId[locationId];
 
   if (session) {
-    let messageSender = session.getMessageSender();
-    let gameMode = session.getGameMode();
-    if (gameMode.onlyOwnerOrAdminCanStop && !cancelingUserIsAdmin && session.getOwnerId() !== cancelingUserId) {
-      return Promise.resolve(messageSender.notifyStopFailedUserNotAuthorized());
-    }
-    return Promise.resolve(endQuiz(true, session, messageSender, messageSender.notifyQuizEndedUserCanceled, cancelingUserId));
+    let messageSender = state.quizManager.messageSenderForLocationId[locationId];
+    // TODO: Dont allow cancel if user is not admin or is not session owner, depending on the game type.
+    return Promise.resolve(endQuiz(session, messageSender, messageSender.notifyQuizEndedUserCanceled, cancelingUserId));
   }
 }
 
@@ -106,14 +104,14 @@ function skipCommand(locationId) {
 }
 
 function saveQuizCommand(locationId, savingUserId) {
-  let session = state.quizManager.sessionForLocationId[locationId];
+  const session = state.quizManager.sessionForLocationId[locationId];
   if (!session) {
     return Promise.resolve(false);
   }
-  if (session.getGameMode().isReviewMode) {
-    return session.getMessageSender().notifySaveFailedIsReview();
-  }
-  let ownerId = session.getOwnerId();
+
+  // TODO: Dont allow save for review mode
+
+  const ownerId = session.ownerId;
   if (savingUserId !== ownerId) {
     return session.getMessageSender().notifySaveFailedNotOwner();
   }
@@ -123,11 +121,13 @@ function saveQuizCommand(locationId, savingUserId) {
     if (session.saveRequestedByUserId) {
       return;
     }
+
+    const messageSender = state.quizManager.messageSenderForLocationId[locationId];
     if (hasSpace) {
       session.saveRequestedByUserId = savingUserId;
-      return session.getMessageSender().notifySaving();
+      return messageSender.notifySaving();
     } else {
-      return session.getMessageSender().notifySaveFailedNoSpace(MAX_SAVES_PER_USER);
+      return messageSender.getMessageSender().notifySaveFailedNoSpace(MAX_SAVES_PER_USER);
     }
   });
 }
@@ -141,34 +141,34 @@ function setSessionForLocationId(session, locationId) {
   state.quizManager.sessionForLocationId[locationId] = session;
 }
 
+function setMessageSenderForLocationId(messageSender, locationId) {
+  assert(!state.quizManager.messageSenderForLocationId[locationId], 'Already a message sender registered for that location id');
+  state.quizManager.messageSenderForLocationId[locationId] = messageSender;
+}
+
 /* ACTIONS */
 
 class Action {
-  constructor(session) {
-    this.session_ = session;
-  }
-
-  getSession_() {
-    return this.session_;
+  constructor(session, messageSender) {
+    this.session = session;
+    this.messageSender = messageSender;
   }
 }
 
 class EndQuizForErrorAction extends Action {
   do() {
-    let session = this.getSession_();
     try {
       globals.logger.logFailure(LOGGER_TITLE, 'Stopping for error');
-      let messageSender = session.getMessageSender();
-      return Promise.resolve(endQuiz(true, session, messageSender, messageSender.notifyQuizEndedError)).catch(err => {
+      return Promise.resolve(endQuiz(this.session, this.messageSender, messageSender.notifyQuizEndedError)).catch(err => {
         globals.logger.logFailure(LOGGER_TITLE, 'Error ending quiz gracefully for error. Attempting to close session.');
-        return Promise.resolve(closeSession(session, true)).then(() => {
+        return Promise.resolve(closeSession(this.session, true)).then(() => {
           globals.logger.logSuccess(LOGGER_TITLE, 'Session closed successfully.');
           throw err;
         });
       });
     } catch (err) {
       globals.logger.logFailure(LOGGER_TITLE, 'Error ending quiz gracefully for error. Attempting to close session.');
-      return Promise.resolve(closeSession(session, true)).then(() => {
+      return Promise.resolve(closeSession(this.session, true)).then(() => {
         globals.logger.logSuccess(LOGGER_TITLE, 'Session closed successfully.');
         throw err;
       });
@@ -178,33 +178,26 @@ class EndQuizForErrorAction extends Action {
 
 class EndQuizScoreLimitReachedAction extends Action {
   do() {
-    let session = this.getSession_();
-    let messageSender = session.getMessageSender();
-    let scoreLimit = session.getScores().getScoreLimit();
-    return endQuiz(true, session, messageSender, messageSender.notifyQuizEndedScoreLimitReached, scoreLimit);
+    let scoreLimit = this.session.getScores().getScoreLimit();
+    return endQuiz(this.session, this.messageSender, this.messageSender.notifyQuizEndedScoreLimitReached, scoreLimit);
   }
 }
 
 class EndQuizNoQuestionsLeftAction extends Action {
   do() {
-    let session = this.getSession_();
-    let messageSender = session.getMessageSender();
-    return endQuiz(true, session, messageSender, messageSender.notifyQuizEndedNoQuestionsLeft, session.getGameMode());
+    return endQuiz(this.session, this.messageSender, this.messageSender.notifyQuizEndedNoQuestionsLeft, this.session.getGameMode());
   }
 }
 
 class EndQuizTooManyWrongAnswersAction extends Action {
   do() {
-    let session = this.getSession_();
-    let wrongAnswersCount = session.getUnansweredQuestionsInARow();
-    let messageSender = session.getMessageSender();
-    return endQuiz(true, session, messageSender, messageSender.notifyQuizEndedTooManyWrongAnswers, wrongAnswersCount);
+    return endQuiz(this.session, this.messageSender, this.messageSender.notifyQuizEndedTooManyWrongAnswers);
   }
 }
 
 class ShowAnswersAction extends Action {
-  constructor(session, timeLeft) {
-    super(session);
+  constructor(session, messageSender, timeLeft) {
+    super(session, messageSender);
     this.timeLeft = timeLeft;
   }
 
@@ -216,18 +209,17 @@ class ShowAnswersAction extends Action {
     this.timeoutEnded_ = true;
 
     try {
-      const session = this.getSession_();
       const currentCard = session.getCurrentCard();
 
-      session.markCurrentCardAnswered();
-      let scores = session.getScores();
+      this.session.markCurrentCardAnswered();
+      let scores = this.session.getScores();
       let answerersInOrder = scores.getCurrentQuestionAnswerersInOrder();
       let scoresForUser = scores.getAggregateScoreForUser();
       let answersForUser = scores.getCurrentQuestionsAnswersForUser();
       let pointsForAnswer = scores.getCurrentQuestionPointsForAnswer();
       let scoreLimit = scores.getScoreLimit();
       if (answerersInOrder.length > 0) {
-        Promise.resolve(session.getMessageSender().outputQuestionScorers(
+        Promise.resolve(this.messageSender.outputQuestionScorers(
           currentCard,
           answerersInOrder,
           answersForUser,
@@ -238,7 +230,7 @@ class ShowAnswersAction extends Action {
           globals.logger.logFailure(LOGGER_TITLE, 'Failed to output the scoreboard.', err);
         });
       } else {
-        Promise.resolve(session.getMessageSender().showWrongAnswer(
+        Promise.resolve(this.messageSender.showWrongAnswer(
           currentCard,
           false,
           true,
@@ -248,9 +240,9 @@ class ShowAnswersAction extends Action {
       }
 
       if (scores.checkForWin()) {
-        this.fulfill_(new EndQuizScoreLimitReachedAction(session));
+        this.fulfill_(new EndQuizScoreLimitReachedAction(this.session, this.messageSender));
       } else {
-        this.fulfill_(new WaitAction(session, currentCard.newQuestionDelayAfterAnsweredInMs, new AskQuestionAction(session)));
+        this.fulfill_(new WaitAction(this.session, this.messageSender, currentCard.newQuestionDelayAfterAnsweredInMs, new AskQuestionAction(this.session)));
       }
     } catch (err) {
       this.reject_(err);
@@ -258,17 +250,16 @@ class ShowAnswersAction extends Action {
   }
 
   do() {
-    const session = this.getSession_();
-    const currentCard = session.getCurrentCard();
+    const currentCard = this.session.getCurrentCard();
     return new Promise((fulfill, reject) => {
       this.fulfill_ = fulfill;
       this.reject_ = reject;
-      const additionalAnswerWaitTimeInMs = session.isNoRace()
+      const additionalAnswerWaitTimeInMs = this.session.isNoRace
         ? this.timeLeft
         : currentCard.additionalAnswerWaitTimeInMs;
 
       let timer = setTimeout(() => this.endTimeout(), additionalAnswerWaitTimeInMs);
-      session.addTimer(timer);
+      this.session.addTimer(timer);
     });
   }
 
@@ -283,10 +274,9 @@ class ShowAnswersAction extends Action {
   }
 
   tryAcceptUserInput(userId, userName, input) {
-    const session = this.getSession_();
-    const card = session.getCurrentCard();
-    const oneAnswerPerPlayer = session.oneAnswerPerPlayer() || card.options;
-    if (oneAnswerPerPlayer && session.answerAttempters.indexOf(userId) !== -1) {
+    const card = this.session.getCurrentCard();
+    const oneAnswerPerPlayer = this.session.isHardcore || card.options;
+    if (oneAnswerPerPlayer && this.session.answerAttempters.indexOf(userId) !== -1) {
       return false;
     }
 
@@ -551,7 +541,7 @@ function chainActions(locationId, action) {
   } catch (err) {
     globals.logger.logFailure(LOGGER_TITLE, 'Error in chainActions. Closing the session.', err);
     let messageSender = session.getMessageSender();
-    return Promise.resolve(endQuiz(true, session, messageSender, messageSender.notifyQuizEndedError)).then(() => {
+    return Promise.resolve(endQuiz(session, messageSender, messageSender.notifyQuizEndedError)).then(() => {
       return QUIZ_END_STATUS_ERROR;
     });
   }
@@ -564,9 +554,10 @@ function verifySessionNotInProgress(locationId) {
 }
 
 class QuizManager {
-  startSession(session, locationId) {
+  startSession(locationId, session, messageSender) {
     verifySessionNotInProgress(locationId);
     setSessionForLocationId(session, locationId);
+    setMessageSenderForLocationId(messageSender, locationId);
     return chainActions(locationId, new StartAction(session));
   }
 

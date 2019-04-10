@@ -32,12 +32,36 @@ function createSequenceForDeckId(decks) {
   return sequenceForDeckId;
 }
 
-function createNew(decks) {
+function createNew(
+  decks,
+  locationId,
+  ownerId,
+  scoreScopeId,
+  isHardcore,
+  isNoRace,
+  modifiersForDeckUniqueId,
+  gameModeId,
+  contextualDeckSettings,
+  overrideDeckSettings,
+  fontSettings,
+  sessionModifiers,
+  ) {
   return {
     deckUniqueIds: decks.map(deck => deck.uniqueId),
     sequenceForDeckId: createSequenceForDeckId(decks),
     started: false,
-    settings: {},
+    contextualDeckSettings: contextualDeckSettings,
+    overrideDeckSettings: overrideDeckSettings,
+    fontSettings,
+    locationId,
+    ownerId,
+    scoreScopeId,
+    isHardcore,
+    isNoRace,
+    modifiersForDeckUniqueId,
+    requiresAudioConnection: decks.some(deck => deck.requiresAudioConnection),
+    gameModeId,
+    sessionModifiers,
   };
 }
 

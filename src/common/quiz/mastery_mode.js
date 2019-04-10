@@ -98,7 +98,7 @@ function parseUserOverrides(settingsOverrides) {
 }
 
 module.exports = {
-  serializationIdentifier: 'MASTERY',
+  key: 'MASTERY',
   questionLimitOverride: new SettingsOverride(Number.MAX_SAFE_INTEGER, true, true),
   unansweredQuestionLimitOverride: new SettingsOverride(10, true, true),
   answerTimeLimitOverride: new SettingsOverride(16000, false, false, 4000, 120000),

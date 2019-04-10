@@ -15,7 +15,7 @@ function parseUserOverrides(settingsOverrides) {
 }
 
 module.exports = {
-  serializationIdentifier: 'NORMAL',
+  key: 'NORMAL',
   questionLimitOverride: new SettingsOverride(0, false, false, 1, 10000),
   unansweredQuestionLimitOverride: new SettingsOverride(0, false, false, 1, 20),
   answerTimeLimitOverride: new SettingsOverride(0, false, false, 4000, 120000),

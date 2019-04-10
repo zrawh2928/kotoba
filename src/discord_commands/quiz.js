@@ -3,11 +3,12 @@ const state = require('./../common/static_state.js');
 const assert = require('assert');
 const globals = require('./../common/globals.js');
 const deckLoader = require('../common/quiz/deck_loader.js');
+const Session = require('./../common/quiz/session_new.js');
 const { Permissions } = require('monochrome-bot');
+const { getAdvancedHelp } = require('./../common/quiz/decks_content.js');
 
 const quizManager = reload('./../common/quiz/manager.js');
 const createHelpContent = reload('./../common/quiz/decks_content.js').createContent;
-const getAdvancedHelp = reload('./../common/quiz/decks_content.js').getAdvancedHelp;
 const constants = reload('./../common/constants.js');
 const { PublicError } = require('monochrome-bot');
 const NormalGameMode = reload('./../common/quiz/normal_mode.js');
@@ -15,8 +16,6 @@ const MasteryGameMode = reload('./../common/quiz/mastery_mode.js');
 const ConquestGameMode = reload('./../common/quiz/conquest_mode.js');
 const ReviewGameMode = reload('./../common/quiz/review_mode.js');
 const saveManager = reload('./../common/quiz/pause_manager.js');
-const DeckCollection = reload('./../common/quiz/deck_collection.js');
-const Session = reload('./../common/quiz/session.js');
 const trimEmbed = reload('./../common/util/trim_embed.js');
 const audioConnectionManager = reload('./../discord/audio_connection_manager.js');
 
@@ -26,17 +25,21 @@ const MAX_INTERMEDIATE_CORRECT_ANSWERS_FIELD_LENGTH = 275;
 const NEW_QUESTION_DELAY_IN_MS_FOR_USER_OVERRIDE = 3000;
 const MASTERY_NAME = 'conquest';
 const CONQUEST_NAME = 'inferno';
+const HARDCORE_NAME = 'hardcore';
+const NORACE_NAME = 'norace';
+const NODELAY_NAME = 'nodelay';
 const MASTERY_EXTENSION = `-${MASTERY_NAME}`;
 const CONQUEST_EXTENSION = `-${CONQUEST_NAME}`;
 const INTERMEDIATE_ANSWER_TRUNCATION_REPLACEMENT = ' [...]';
+const STOP_KEYWORDS = ['stop', 'end', 'enquiz', 'quit', 'cancel'];
 
-function createMasteryModeDisabledString(prefix) {
-  return `Conquest Mode is not enabled in this channel. Please do it in a different channel, or in DM, or ask a server admin to enable it by saying **${prefix}settings quiz/japanese/conquest_and_inferno_enabled enabled**`;
-}
-
-function createConquestModeDisabledString(prefix) {
-  return `Inferno Mode is not enabled in this channel. Please do it in a different channel, or in DM, or ask a server admin to enable it by saying **${prefix}settings quiz/japanese/conquest_and_inferno_enabled enabled**`;
-}
+const mixedDecks = {
+  easymix: ['n5','n4','defs1','anagrams4','10k','katakana'],
+  medmix: ['n3','defs7','9k','8k','7k','anagrams5','prefectures'],
+  hardmix: ['n2','n1','6k','5k','defs12','defs13','onomato','numbers','anagrams6'],
+  hardermix: ['4k','3k','j2k','defs17','defs18','defs14','anagrams7','anagrams8','myouji','namae','ejtrans','hard','擬音語','kklc'],
+  insanemix: ['2k','j1k','1k','anagrams9','anagrams10','yojijukugo','countries','animals'],
+};
 
 function createTitleOnlyEmbedWithColor(title, color) {
   return {
@@ -696,20 +699,7 @@ class DiscordMessageSender {
   }
 }
 
-const mixtureReplacements = {
-  easymix: 'n5+n4+defs1+anagrams4+10k+katakana',
-  medmix: 'n3+defs7+9k+8k+7k+anagrams5+prefectures',
-  hardmix: 'n2+n1+6k+5k+defs12+defs13+onomato+numbers+anagrams6',
-  hardermix: '4k+3k+j2k+defs17+defs18+defs14+anagrams7+anagrams8+myouji+namae+ejtrans+hard+擬音語+kklc',
-  insanemix: '2k+j1k+1k+anagrams9+anagrams10+yojijukugo+countries+animals',
-};
-
-function createMasteryHelp(isEnabledInServer, prefix) {
-  let footerMessage = '';
-  if (!isEnabledInServer) {
-    footerMessage = `**Disabled!** ${createMasteryModeDisabledString(prefix)}`;
-  }
-
+function createMasteryHelp(prefix) {
   return {
     embed: {
       title: 'Conquest Mode',
@@ -717,21 +707,14 @@ function createMasteryHelp(isEnabledInServer, prefix) {
 
 You can use **${prefix}quiz save** and **${prefix}quiz load** to save and load progress so you can learn over a period of days or weeks or months.
 
-To start, say **${prefix}quiz${MASTERY_EXTENSION}** plus a deck name. For example: **${prefix}quiz${MASTERY_EXTENSION} N5**. Keep in mind that if you aren't in a DM, other people can answer the questions too, and then you won't see them again.
-
-${footerMessage}`,
+To start, say **${prefix}quiz${MASTERY_EXTENSION}** plus a deck name. For example: **${prefix}quiz${MASTERY_EXTENSION} N5**. Keep in mind that if you aren't in a DM, other people can answer the questions too, and then you won't see them again.`,
       color: constants.EMBED_NEUTRAL_COLOR,
       footer: { icon_url: constants.FOOTER_ICON_URI, text: `You can also conquer multiple decks. For example: ${prefix}quiz${MASTERY_EXTENSION} N5+N4` },
     },
   };
 }
 
-function createConquestHelp(isEnabledInServer, prefix) {
-  let footerMessage = '';
-  if (!isEnabledInServer) {
-    footerMessage = `**Disabled!** ${createConquestModeDisabledString(prefix)}`;
-  }
-
+function createConquestHelp(prefix) {
   return {
     embed: {
       title: 'Inferno Mode',
@@ -743,9 +726,7 @@ Bring your friends! The top scorers will appear together as a team on the infern
 
 To start, say **${prefix}quiz${CONQUEST_EXTENSION}** plus a deck name. For example: **${prefix}quiz${CONQUEST_EXTENSION} N5**.
 
-You can override some quiz settings, however, doing so makes your final results ineligible for the leaderboard. If you want to play N5, lose half a second per wrong answer, and start with a time limit of 20 seconds, try this: **${prefix}quiz${CONQUEST_EXTENSION} N5 .5 20**.
-
-${footerMessage}`,
+You can override some quiz settings, however, doing so makes your final results ineligible for the leaderboard. If you want to play N5, lose half a second per wrong answer, and start with a time limit of 20 seconds, try this: **${prefix}quiz${CONQUEST_EXTENSION} N5 .5 20**.`,
       color: constants.EMBED_NEUTRAL_COLOR,
     },
   };
@@ -753,36 +734,6 @@ ${footerMessage}`,
 
 function getScoreScopeIdFromMsg(msg) {
   return msg.channel.guild ? msg.channel.guild.id : msg.channel.id;
-}
-
-function throwIfInternetCardsNotAllowed(isDm, session, internetCardsAllowed, prefix) {
-  if (!internetCardsAllowed && !isDm && session.containsInternetCards()) {
-    const message = {
-      embed: {
-        title: 'Internet decks disabled',
-        description: `That deck contains internet cards, but internet decks are disabled in this channel. You can try in a different channel, or in a DM, or ask a server admin to enable internet decks by saying **${prefix}settings quiz/japanese/internet_decks_enabled enabled**`,
-        color: constants.EMBED_NEUTRAL_COLOR,
-      },
-    };
-    throw PublicError.createWithCustomPublicMessage(message, false, 'Internet decks disabled');
-  }
-}
-
-function throwIfGameModeNotAllowed(isDm, gameMode, masteryEnabled, prefix) {
-  if (!masteryEnabled && !isDm &&
-      (gameMode.isMasteryMode ||
-       gameMode.isConquestMode ||
-       gameMode.serializationIdentifier === MasteryGameMode.serializationIdentifier ||
-       gameMode.serializationIdentifier === ConquestGameMode.serializationIdentifier)) {
-    const message = {
-      embed: {
-        title: 'Game mode disabled',
-        description: `That game mode is not enabled in this channel. You can try it in a different channel, or via DM, or ask a server admin to enable the game mode by saying **${prefix}settings quiz/japanese/conquest_and_inferno_enabled enabled**`,
-        color: constants.EMBED_NEUTRAL_COLOR,
-      },
-    };
-    throw PublicError.createWithCustomPublicMessage(message, false, 'Game mode disabled');
-  }
 }
 
 function throwIfSessionInProgressAtLocation(locationId, prefix) {
@@ -842,8 +793,6 @@ async function load(
     return sendSaveMementos(msg, currentMementos, recyclingBinMementos, `I couldn't find save #${userFacingSaveId}. Here are the available saves.`);
   }
 
-  throwIfGameModeNotAllowed(isDm, memento, masteryModeEnabled, prefix);
-
   const saveData = await saveManager.load(memento);
   const session = await Session.createFromSaveData(
     msg.channel.id,
@@ -854,7 +803,7 @@ async function load(
 
   logger.logSuccess(LOGGER_TITLE, 'Loading save data');
   try {
-    if (session.requiresAudioConnection()) {
+    if (session.requiresAudioConnection) {
       await audioConnectionManager.openConnectionFromMessage(bot, msg);
     }
 
@@ -875,36 +824,6 @@ async function load(
     logger.logFailure(LOGGER_TITLE, 'Error with loaded save', err);
     await saveManager.restore(msg.author.id, memento);
     return msg.channel.createMessage(`Looks like there was an error, sorry about that. I have attempted to restore your save data to its previous state, you can try to load it again with **${prefix}quiz load**. The error has been logged and will be addressed.`);
-  }
-}
-
-async function deleteInternetDeck(msg, searchTerm, userId) {
-  try {
-    await deckLoader.deleteDeck(searchTerm, userId);
-    return msg.channel.createMessage('That deck was successfully deleted.', null, msg);
-  } catch (err) {
-    // TODO: Handle error
-    /*
-    if (deletionResult === deckLoader.DeletionStatus.DELETED) {
-      return msg.channel.createMessage('That deck was successfully deleted.', null, msg);
-    } else if (deletionResult === deckLoader.DeletionStatus.DECK_NOT_FOUND) {
-      return msg.channel.createMessage(`I didn't find a deck called ${searchTerm}. Did you type it wrong or has it already been deleted?`, null, msg);
-    } else if (deletionResult === deckLoader.DeletionStatus.USER_NOT_OWNER) {
-      return msg.channel.createMessage('You can\'t delete that deck because you didn\'t create it.', null, msg);
-    }
-    */
-
-    return undefined;
-  }
-}
-
-function createNonReviewGameMode(isMastery, isConquest) {
-  if (isMastery) {
-    return MasteryGameMode;
-  } else if (isConquest) {
-    return ConquestGameMode;
-  } else {
-    return NormalGameMode;
   }
 }
 
@@ -1008,153 +927,16 @@ function getReviewDeckOrThrow(deck, prefix) {
   return deck;
 }
 
-const rangeRegex = /\(([0-9]*) *- *([0-9]*)\)/;
-
-function getDeckNameAndModifierInformation(deckNames) {
-  return deckNames.map((deckName) => {
-    let nameWithoutExtension = deckName;
-    let startIndex;
-    let endIndex;
-    let mc = false;
-
-    const match = deckName.match(rangeRegex);
-    if (match) {
-      startIndex = parseInt(match[1], 10);
-      endIndex = parseInt(match[2], 10);
-      nameWithoutExtension = deckName.replace(rangeRegex, '');
-    }
-
-    if (nameWithoutExtension.endsWith('-mc')) {
-      mc = true;
-      nameWithoutExtension = nameWithoutExtension.substring(0, nameWithoutExtension.length - 3);
-    }
-
-    return {
-      deckNameOrUniqueId: nameWithoutExtension,
-      startIndex,
-      endIndex,
-      mc,
-    };
-  });
-}
-
-async function startNewQuiz(
-  bot,
-  msg,
-  suffix,
-  messageSender,
-  masteryEnabled,
-  internetDecksEnabled,
-  serverSettings,
-  isMastery,
-  isConquest,
-  isHardcore,
-  isNoRace,
-) {
-  let suffixReplaced = suffix;
-
-  // TECH DEBT: Replacing these right into the suffix and
-  // pretending the user entered them is a little janky.
-  Object.keys(mixtureReplacements).forEach((replacementKey) => {
-    suffixReplaced = suffixReplaced.replace(replacementKey, mixtureReplacements[replacementKey]);
-  });
-
-  const parts = suffixReplaced.split(' ');
-  const deckNames = parts.shift().split('+').filter(deckName => !!deckName);
-  const args = parts;
-  const invokerId = msg.author.id;
-  const locationId = msg.channel.id;
-  const isDm = !msg.channel.guild;
-  const scoreScopeId = getScoreScopeIdFromMsg(msg);
-  const prefix = msg.prefix;
-
-  let decks;
-  let gameMode;
-  if (suffixReplaced.startsWith('reviewme')) {
-    gameMode = ReviewGameMode;
-    decks = [await deckLoader.getUserReviewDeck(msg.author.id)];
-  } else if (suffixReplaced.startsWith('review')) {
-    gameMode = ReviewGameMode;
-    decks = [await deckLoader.getLocationReviewDeck(msg.channel.id)];
-  } else {
-    gameMode = createNonReviewGameMode(isMastery, isConquest);
-
-    const deckInformations = getDeckNameAndModifierInformation(deckNames);
-    
-    try {
-      // TODO: Handle deck modifiers (MC and indices)
-      const deckPromises = deckInformations.map(
-        info => deckLoader.getDeck(info.deckNameOrUniqueId));
-      decks = await Promise.all(deckPromises);
-    } catch (err) {
-      // TODO. Handle errors.
-      /*
-      if (decksLookupResult.status === deckLoader.DeckRequestStatus.DECK_NOT_FOUND) {
-        return msg.channel.createMessage(`I don't have a deck named **${decksLookupResult.notFoundDeckName}**. Say **${prefix}quiz** to see the decks I have!`, null, msg);
-      } else if (decksLookupResult.status === deckLoader.DeckRequestStatus.INDEX_OUT_OF_RANGE) {
-        return msg.channel.createMessage(`Something is wrong with the range for ${decksLookupResult.deckName}. The maximum range for that deck is (${decksLookupResult.allowedStart}-${decksLookupResult.allowedEnd})`);
-      } else if (decksLookupResult.status === deckLoader.DeckRequestStatus.ALL_DECKS_FOUND) {
-        ({ decks } = decksLookupResult);
-      } else {
-        assert(`Unknown deck lookup status: ${decksLookupResult.status}`);
-      }
-      */
-    }
-  }
-
-  // At this point we have the decks and are ready to start the quiz unless:
-  // 1. The game mode is not allowed in this channel.
-  // 2. The deck contains internet cards, but internet decks are not allowed in this channel.
-  // 3. A quiz is already in progress in this channel.
-  // 4. We need to establish a voice connection but cannot do so
-
-  // 1. Check the game mode.
-  throwIfGameModeNotAllowed(isDm, gameMode, masteryEnabled, prefix);
-
-  // 3. Check if a game is in progress
-  throwIfSessionInProgressAtLocation(locationId, prefix);
-
-  // Create the deck collection.
-  const deckCollection = DeckCollection.createNewFromDecks(decks, gameMode);
-
-  // Create the session
-  const settings = createSettings(serverSettings, gameMode, args);
-  const session = Session.createNew(
-    locationId,
-    invokerId,
-    deckCollection,
-    messageSender,
-    scoreScopeId,
-    settings,
-    gameMode,
-    isHardcore,
-    isNoRace,
-  );
-
-  // 4. Try to establish audio connection
-  if (session.requiresAudioConnection()) {
-    await audioConnectionManager.openConnectionFromMessage(bot, msg);
-  }
-
-  // 2. Check for internet cards
-  throwIfInternetCardsNotAllowed(isDm, session, internetDecksEnabled, prefix);
-
-  // All systems go. Liftoff!
-  quizManager.startSession(session, locationId);
-
-  return undefined;
-}
-
-function showHelp(msg, isMastery, isConquest, masteryEnabled) {
+function showHelp(msg, isMastery, isConquest) {
   const prefix = msg.prefix;
 
   let helpMessage;
   if (!isMastery && !isConquest) {
     helpMessage = createHelpContent(prefix);
   } else if (isMastery) {
-    helpMessage = createMasteryHelp(masteryEnabled, prefix);
+    helpMessage = createMasteryHelp(prefix);
   } else if (isConquest) {
-    helpMessage = createConquestHelp(masteryEnabled, prefix);
+    helpMessage = createConquestHelp(prefix);
   } else {
     assert(false, 'Unknown extension');
   }
@@ -1205,6 +987,28 @@ function throwIfShutdownScheduled(channelId) {
   }
 }
 
+function getDeckInfo(deckNameWithModifiers) {
+  const regexResult = /(.*?)(?:\(([0-9]*) *- *([0-9]*)\))?$/.exec(deckNameWithModifiers);
+  const deckName = regexResult[1];
+  const startIndexString = regexResult[2];
+  const endIndexString = regexResult[3];
+
+  const deckInfo = {
+    deckName,
+  };
+
+  if (startIndexString && endIndexString) {
+    deckInfo.startIndex = parseInt(startIndexString);
+    deckInfo.endIndex = parseInt(endIndexString);
+
+    if (Number.isNaN(deckInfo.startIndex) ||  Number.isNaN(deckInfo.endIndex)) {
+      throw new Error('Bad start or end index'); // TODO: Handle this right
+    }
+  }
+
+  return deckInfo;
+}
+
 module.exports = {
   commandAliases: ['quiz', 'readingQuiz', 'starttest', 'startquiz', 'rt', 'rq', 'q'],
   aliasesForHelp: ['quiz', 'q'],
@@ -1220,43 +1024,43 @@ module.exports = {
   ]),
   attachIsServerAdmin: true,
   async action(bot, msg, suffix, monochrome, serverSettings) {
+    const messageSender = new DiscordMessageSender(bot, msg);
+
+    // Remove unnecessary spaces.
     let suffixReplaced = suffix.replace(/ *\+ */g, '+').replace(/ *-mc/g, '-mc').trim();
     suffixReplaced = suffixReplaced.toLowerCase();
-    const messageSender = new DiscordMessageSender(bot, msg);
-    const masteryEnabled = serverSettings['quiz/japanese/conquest_and_inferno_enabled'];
-    const internetDecksEnabled = serverSettings['quiz/japanese/internet_decks_enabled'];
 
-    const isMastery = msg.extension === MASTERY_EXTENSION
-      || suffixReplaced.indexOf(MASTERY_NAME) !== -1;
-    const isConquest = !isMastery
-      && (msg.extension === CONQUEST_EXTENSION || suffixReplaced.indexOf(CONQUEST_NAME) !== -1);
-    const isHardcore = suffixReplaced.indexOf('hardcore') !== -1;
-    const isNoDelay = suffixReplaced.indexOf('nodelay') !== -1;
-    const isNoRace = suffixReplaced.indexOf('norace') !== -1;
+    // Check if mastery mode should be enabled.
+    const extensionIsMastery = msg.extension === MASTERY_EXTENSION;
+    const invocationIncludesMasteryName = suffixReplaced.indexOf(MASTERY_NAME) !== -1;
+    const isMastery = extensionIsMastery || invocationIncludesMasteryName;
+
+    // Check if conquest mode should be enabled.
+    const extensionIsConquest = msg.extension === CONQUEST_EXTENSION;
+    const invocationIncludesConquestName = suffixReplaced.indexOf(CONQUEST_NAME) !== -1;
+    const isConquest = extensionIsConquest || invocationIncludesConquestName;
+
+    assert(!isMastery || !isConquest, 'Cannot be both conquest and mastery');
+
+    const isHardcore = suffixReplaced.indexOf(HARDCORE_NAME) !== -1;
+    const isNoDelay = suffixReplaced.indexOf(NODELAY_NAME) !== -1;
+    const isNoRace = suffixReplaced.indexOf(NORACE_NAME) !== -1;
+    const sessionModifiers = { isHardcore, isNoRace };
 
     suffixReplaced = suffixReplaced
       .replace(CONQUEST_NAME, '')
       .replace(MASTERY_NAME, '')
-      .replace(/hardcore/g, '')
-      .replace(/nodelay/g, '')
-      .replace(/norace/g, '')
+      .replace(HARDCORE_NAME, '')
+      .replace(NODELAY_NAME, '')
+      .replace(NORACE_NAME, '')
       .trim();
-
-    // Hack: manipulate the returned server settings
+    
+    const overrideSettings = {};
+    overrideSettings.japanese = {};
     if (isNoDelay) {
-      serverSettings['quiz/japanese/new_question_delay_after_unanswered'] = 0;
-      serverSettings['quiz/japanese/new_question_delay_after_answered'] = 0;
-      serverSettings['quiz/japanese/additional_answer_wait_time'] = 0;
-    }
-
-    // Delete operation
-    if (suffixReplaced.startsWith('delete')) {
-      const searchTerm = suffixReplaced.split(' ')[1];
-      if (!searchTerm) {
-        const message = 'Say **k!quiz delete deckname** to delete a custom quiz deck.';
-        throw PublicError.createWithCustomPublicMessage(message, false, 'No deck name provided');
-      }
-      return deleteInternetDeck(msg, suffixReplaced.split(' ')[1], msg.author.id);
+      overrideSettings.japanese.new_question_delay_after_unanswered = 0;
+      overrideSettings.japanese.new_question_delay_after_answered = 0;
+      overrideSettings.japanese.additional_answer_wait_time = 0;
     }
 
     // Save operation
@@ -1265,13 +1069,13 @@ module.exports = {
     }
 
     // Stop operation
-    if (suffixReplaced.startsWith('stop') || suffixReplaced.startsWith('end') || suffixReplaced.startsWith('endquiz') || suffixReplaced.startsWith('quit')) {
+    if (STOP_KEYWORDS.some(keyword => suffixReplaced.startsWith(keyword))) {
       return quizManager.stopQuiz(msg.channel.id, msg.author.id, msg.authorIsServerAdmin);
     }
 
     // Help operation
     if (!suffixReplaced || suffixReplaced === 'help') {
-      return showHelp(msg, isMastery, isConquest, masteryEnabled);
+      return showHelp(msg, isMastery, isConquest);
     }
 
     const advancedHelp = getAdvancedHelp(suffix);
@@ -1283,23 +1087,101 @@ module.exports = {
 
     // Load operation
     if (suffixReplaced.startsWith('load')) {
-      return load(bot, msg, suffixReplaced.split(' ')[1], messageSender, masteryEnabled, internetDecksEnabled, monochrome.getLogger());
+      return load(bot, msg, suffixReplaced.split(' ')[1], masteryEnabled, internetDecksEnabled, monochrome.getLogger());
     }
 
-    // Start operation
-    return startNewQuiz(
-      bot,
-      msg,
-      suffixReplaced,
-      messageSender,
-      masteryEnabled,
-      internetDecksEnabled,
-      serverSettings,
-      isMastery,
-      isConquest,
-      isHardcore,
-      isNoRace,
+    /* Split decks and expand mixed decks */
+
+    const deckNamesWithModifiers = [];
+    const parts = suffixReplaced.split(' ');
+    const deckNamesUnexpandedWithModifiers = parts
+      .shift()
+      .split('+')
+      .filter(deckName => !!deckName);
+
+    deckNamesUnexpandedWithModifiers.forEach((rawDeckName) => {
+      const deckNameWithoutModifier = rawDeckName.split('(')[0];
+      const modifier = rawDeckName.substring(deckNameWithoutModifier.length);
+      if (mixedDecks[deckNameWithoutModifier]) {
+        deckNamesWithModifiers.push(
+          ...mixedDecks[deckNameWithoutModifier].map(deckName => deckName + modifier));
+      } else {
+        deckNamesWithModifiers.push(rawDeckName);
+      }
+    });
+
+    const deckInfos = deckNamesUnexpandedWithModifiers.map(getDeckInfo);
+
+    /* Get decks */
+
+    const args = parts;
+    const invokerId = msg.author.id;
+    const locationId = msg.channel.id;
+    const isDm = !msg.channel.guild;
+    const scoreScopeId = getScoreScopeIdFromMsg(msg);
+    const { prefix } = msg;
+  
+    let decks;
+    let gameModeKey;
+    if (suffixReplaced.startsWith('reviewme')) {
+      gameModeKey = ReviewGameMode.key;
+      decks = [await deckLoader.getUserReviewDeck(msg.author.id)];
+    } else if (suffixReplaced.startsWith('review')) {
+      gameModeKey = ReviewGameMode.key;
+      decks = [await deckLoader.getLocationReviewDeck(msg.channel.id)];
+    } else {
+      if (isMastery) {
+        gameModeKey = MasteryGameMode.key;
+      } else if (isConquest) {
+        gameModeKey = ConquestGameMode.key;
+      } else {
+        gameModeKey = NormalGameMode.key;
+      }
+      
+      try {
+        // TODO: Handle deck modifiers (MC and indices)
+        const deckPromises = deckInfos.map(info => deckLoader.getDeck(info.deckName));
+        decks = await Promise.all(deckPromises);
+      } catch (err) {
+        // TODO. Handle errors.
+        /*
+        if (decksLookupResult.status === deckLoader.DeckRequestStatus.DECK_NOT_FOUND) {
+          return msg.channel.createMessage(`I don't have a deck named **${decksLookupResult.notFoundDeckName}**. Say **${prefix}quiz** to see the decks I have!`, null, msg);
+        } else if (decksLookupResult.status === deckLoader.DeckRequestStatus.INDEX_OUT_OF_RANGE) {
+          return msg.channel.createMessage(`Something is wrong with the range for ${decksLookupResult.deckName}. The maximum range for that deck is (${decksLookupResult.allowedStart}-${decksLookupResult.allowedEnd})`);
+        } else if (decksLookupResult.status === deckLoader.DeckRequestStatus.ALL_DECKS_FOUND) {
+          ({ decks } = decksLookupResult);
+        } else {
+          assert(`Unknown deck lookup status: ${decksLookupResult.status}`);
+        }
+        */
+      }
+    }
+  
+    // At this point we have the decks and are ready to start the quiz unless:
+    // 1. The game mode is not allowed in this channel.
+    // 2. The deck contains internet cards, but internet decks are not allowed in this channel.
+    // 3. A quiz is already in progress in this channel.
+    // 4. We need to establish a voice connection but cannot do so
+  
+    // 3. Check if a game is in progress
+    throwIfSessionInProgressAtLocation(locationId, prefix);
+  
+    // Create the session
+    const session = Session.createNew(
+      // TODO: Get these arguments right
     );
+  
+    // 4. Try to establish audio connection
+    if (session.requiresAudioConnection) {
+      await audioConnectionManager.openConnectionFromMessage(bot, msg);
+    }
+  
+    // 2. Check for internet cards
+    throwIfInternetCardsNotAllowed(isDm, session, internetDecksEnabled, prefix);
+  
+    // All systems go. Liftoff!
+    return quizManager.startSession(locationId, session, messageSender);
   },
   canHandleExtension(extension) {
     const extensionLowercase = extension.toLowerCase();
