@@ -12,6 +12,7 @@
   "discordIntermediateAnswerListElementStrategy": "CORRECT_ANSWERS",
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Meaning",
+  "settingsGroup": "images",
   "cards": [
     {
       "question": "https://imgur.com/V4ibwkL",

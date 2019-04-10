@@ -1,6 +1,7 @@
 const assert = require('assert');
 const arrayOnDisk = require('disk-array');
 const decksMetadata = require('./../../../generated/quiz/decks.json');
+const cardStrategies = require('./card_strategies.js');
 
 const REVIEW_DECK_CACHE_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 1 week
 const DISK_ARRAY_CACHE_SIZE_IN_PAGES = 1000;
@@ -11,8 +12,25 @@ const ErrorCodes = {
 
 const deckCache = {};
 
+function validateDeckProperties(deck) {
+  assert(deck.uniqueId, 'No unique ID');
+  assert(deck.name, 'No name.');
+  assert(deck.article, 'No article.');
+  assert(deck.instructions, 'No instructions.');
+  assert(deck.cards, 'No cards.');
+  assert(deck.commentFieldName, 'No comment field name');
+  assert(deck.settingsGroup, 'No settings group');
+  assert(Object.keys(cardStrategies.CreateQuestionStrategy).indexOf(deck.questionCreationStrategy) !== -1, 'No or invalid question creation strategy.');
+  assert(Object.keys(cardStrategies.CreateDictionaryLinkStrategy).indexOf(deck.dictionaryLinkStrategy) !== -1, 'No or invalid dictionary link strategy.');
+  assert(Object.keys(cardStrategies.CardPreprocessingStrategy).indexOf(deck.cardPreprocessingStrategy) !== -1, 'No or invalid preprocessing strategy.');
+  assert(Object.keys(cardStrategies.ScoreAnswerStrategy).indexOf(deck.scoreAnswerStrategy) !== -1, 'No or invalid score answer strategy.');
+  assert(Object.keys(cardStrategies.AnswerCompareStrategy).indexOf(deck.answerCompareStrategy !== -1), 'No or invalid answerCompareStrategy.');
+}
+
 class DeckCacheEntry {
   static insertCacheEntry(cacheKeys, deck, cacheDurationMs) {
+    validateDeckProperties(deck);
+
     const cacheKeysUnique = cacheKeys.filter((x, i) => cacheKeys.indexOf(x) === i);
     const cacheEntry = new DeckCacheEntry();
     cacheEntry.cacheKeys = cacheKeysUnique;

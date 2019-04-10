@@ -11,6 +11,7 @@ const LISTENING_VOCAB_DECK_CARD_PREPROCESSING_STRATEGY = 'FORVO_AUDIO';
 const LISTENING_VOCAB_DECK_DICTIONARY_LINK_STRATEGY = 'JISHO_ANSWER_WORD';
 const LISTENING_VOCAB_DECK_DISCORD_FINAL_ANSWER_LIST_ELEMENT_STRATEGY = 'FORVO_AUDIO_LINK';
 const LISTENING_VOCAB_DECK_NAME_SHORT_NAME_PREFIX = 'lv';
+const LISTENING_VOCAB_DECK_SETTINGS_GROUP = 'listening vocabulary';
 
 const listeningVocabDeckSourceDeckNames = [
   'n1',
@@ -36,6 +37,7 @@ const MEANING_DECK_NAME_REPLACE_STRING_FROM = 'Reading Quiz';
 const MEANING_DECK_NAME_REPLACE_STRING_TO = 'Meaning Quiz';
 const MEANING_DECK_NAME_SHORT_SUFFIX = 'm';
 const MEANING_DECK_COMMENT_FIELD_NAME = 'Reading';
+const MEANING_DECK_SETTINGS_GROUP = 'word_meaning';
 
 const meaningDeckSourceDeckNames = [
   'n1',
@@ -86,6 +88,7 @@ async function createMeaningDeck(deckDataForDeckName, sourceDeck, sourceFileName
 
   sourceDeckCopy.uniqueId = `${sourceDeckCopy.uniqueId}${MEANING_DECK_NAME_SHORT_SUFFIX}`;
   sourceDeckCopy.commentFieldName = MEANING_DECK_COMMENT_FIELD_NAME;
+  sourceDeckCopy.settingsGroup = MEANING_DECK_SETTINGS_GROUP;
   sourceDeckCopy.name = sourceDeckCopy.name.replace(
     MEANING_DECK_NAME_REPLACE_STRING_FROM,
     MEANING_DECK_NAME_REPLACE_STRING_TO,
@@ -129,6 +132,7 @@ async function createWordIdentificationDeck(deckDataForDeckName, sourceDeck, sou
   sourceDeckCopy.instructions = LISTENING_VOCAB_DECK_INSTRUCTIONS;
   sourceDeckCopy.questionCreationStrategy = LISTENING_VOCAB_DECK_QUESTION_CREATION_STRATEGY;
   sourceDeckCopy.dictionaryLinkStrategy = LISTENING_VOCAB_DECK_DICTIONARY_LINK_STRATEGY;
+  sourceDeckCopy.settingsGroup = LISTENING_VOCAB_DECK_SETTINGS_GROUP;
   sourceDeckCopy.discordFinalAnswerListElementStrategy
     = LISTENING_VOCAB_DECK_DISCORD_FINAL_ANSWER_LIST_ELEMENT_STRATEGY;
   sourceDeckCopy.requiresAudioConnection = true;
