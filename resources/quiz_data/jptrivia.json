@@ -14,6 +14,7 @@
   "discordIntermediateAnswerListElementStrategy": "CORRECT_ANSWERS",
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Comment",
+  "settingsGroup": "japanese_trivia",
   "cards": [
     {
       "question": "ドラえもんに登場するスネ夫の名字は？",

@@ -14,6 +14,7 @@
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Line(s)",
   "description": "[Osaka station names](https://mb.jorudan.co.jp/os/eki/menu_osa/)",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "相川",

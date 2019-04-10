@@ -14,6 +14,7 @@
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Comment",
   "description": "Good luck, even if you're Japanese. [Data provided by seg-fault#7170]",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "揉める",

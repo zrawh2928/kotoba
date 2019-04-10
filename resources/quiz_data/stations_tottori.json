@@ -14,6 +14,7 @@
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Line(s)",
   "description": "[Tottori station names](https://mb.jorudan.co.jp/os/eki/menu_ttj/)",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "青谷",

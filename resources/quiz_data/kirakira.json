@@ -14,6 +14,7 @@
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Comment",
   "description": "[Names I would give my children](https://www.eternalcollegest.com/entry/kirakira)",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "剣 (男)",

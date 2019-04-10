@@ -14,6 +14,7 @@
   "discordIntermediateAnswerListElementStrategy": "CORRECT_ANSWERS",
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Comment",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "北海道",

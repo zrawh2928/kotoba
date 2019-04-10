@@ -14,6 +14,7 @@
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Line(s)",
   "description": "[Wakayama station names](https://mb.jorudan.co.jp/os/eki/menu_wak/)",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "朝来",

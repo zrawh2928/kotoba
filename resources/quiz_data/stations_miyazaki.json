@@ -14,6 +14,7 @@
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Line(s)",
   "description": "[Miyazaki station names](https://mb.jorudan.co.jp/os/eki/menu_kmi/)",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "青井岳",

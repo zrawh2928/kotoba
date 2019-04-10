@@ -15,6 +15,7 @@
   "answerCompareStrategy": "STRICT",
   "commentFieldName": "Comment",
   "forceNoMC": true,
+  "settingsGroup": "sentence_typing",
   "cards": [
     {
       "question": "、この一字の違いはきわめて大きい",

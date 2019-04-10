@@ -13,6 +13,7 @@
   "discordIntermediateAnswerListElementStrategy": "CORRECT_ANSWERS",
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Comment",
+  "settingsGroup": "translation",
   "cards": [
     {
       "question": "(already) married",

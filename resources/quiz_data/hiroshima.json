@@ -14,6 +14,7 @@
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "English",
   "description": "Hiroshima place names looked up in [ENAMDICT](https://www.edrdg.org/enamdict/enamdict_doc.html)",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "広島市中区",

@@ -14,6 +14,7 @@
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Meaning",
   "description": "[Data provided by okami#3845]",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "海豹",

@@ -14,6 +14,7 @@
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Comment",
   "description": "Words that K33 can't remember because he's dumb. Harder than **N1**, easier than **hard**.",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "紅葉",

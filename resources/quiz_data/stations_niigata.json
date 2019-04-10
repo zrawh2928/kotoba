@@ -14,6 +14,7 @@
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Line(s)",
   "description": "[Niigata station names](https://mb.jorudan.co.jp/os/eki/menu_nij/)",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "粟生津",

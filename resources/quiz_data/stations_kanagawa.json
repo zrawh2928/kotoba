@@ -14,6 +14,7 @@
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Line(s)",
   "description": "[Kanagawa station names](https://mb.jorudan.co.jp/os/eki/menu_yok/)",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "愛甲石田",

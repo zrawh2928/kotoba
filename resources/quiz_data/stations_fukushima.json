@@ -14,6 +14,7 @@
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Line(s)",
   "description": "[Fukushima station names](https://mb.jorudan.co.jp/os/eki/menu_fks/)",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "会津荒海",

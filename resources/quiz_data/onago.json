@@ -15,6 +15,7 @@
   "compileImages": true,
   "commentFieldName": "Comment",
   "description": "[Popular female given names through the ages](http://honkawa2.sakura.ne.jp/2405.html)",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "千代子",

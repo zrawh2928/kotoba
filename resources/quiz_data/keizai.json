@@ -13,6 +13,7 @@
   "discordIntermediateAnswerListElementStrategy": "CORRECT_ANSWERS",
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Meaning",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "稟議制度",

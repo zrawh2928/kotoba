@@ -14,6 +14,7 @@
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Comment",
   "description": "[Data provided by Kuroda Haru#7034]",
+  "settingsGroup": "onomatopoeia",
   "cards": [
     {
       "question": "easily, readily, quickly, flatly (refuse)",

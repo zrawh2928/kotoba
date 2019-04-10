@@ -807,10 +807,6 @@ async function load(
   internetCardsAllowed,
   logger,
 ) {
-  // TODO: Need to prevent loading decks with internet cards if internet decks aren't enabled.
-  // Tech debt: The deck collection shouldn't be reloading itself.
-  // There should be a save restorer class to assist in that.
-
   let userFacingSaveId = userFacingSaveIdArg;
 
   const isDm = !msg.channel.guild;

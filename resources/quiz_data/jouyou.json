@@ -13,6 +13,7 @@
   "discordIntermediateAnswerListElementStrategy": "ANSWERS_WITH_SCORERS_AND_POINTS_FIRST",
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Comment",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "一",

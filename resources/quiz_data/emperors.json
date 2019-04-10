@@ -14,6 +14,7 @@
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Info",
   "description": "Emperors, shoguns, and related characters.",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "天忍穂耳尊",

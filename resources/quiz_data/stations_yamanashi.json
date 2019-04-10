@@ -14,6 +14,7 @@
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Line(s)",
   "description": "[Yamanashi station names](https://mb.jorudan.co.jp/os/eki/menu_kfu/)",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "赤坂",

@@ -13,6 +13,7 @@
   "discordIntermediateAnswerListElementStrategy": "CORRECT_ANSWERS",
   "answerCompareStrategy": "STRICT",
   "commentFieldName": "Comment",
+  "settingsGroup": "english_definitions",
   "cards": [
     {
       "question": "a road leading up to a private house",

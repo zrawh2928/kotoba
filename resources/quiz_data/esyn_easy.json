@@ -14,6 +14,7 @@
   "discordIntermediateAnswerListElementStrategy": "ANSWERS_WITH_SCORERS_AND_POINTS_FIRST",
   "answerCompareStrategy": "STRICT",
   "commentFieldName": "Info",
+  "settingsGroup": "synonyms",
   "cards": [
     {
       "question": "own",

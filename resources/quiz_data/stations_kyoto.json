@@ -14,6 +14,7 @@
   "answerCompareStrategy": "CONVERT_KANA",
   "commentFieldName": "Line(s)",
   "description": "[Kyoto station names](https://mb.jorudan.co.jp/os/eki/menu_uky/)",
+  "settingsGroup": "kanji_reading",
   "cards": [
     {
       "question": "安栖里",
