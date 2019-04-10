@@ -1,6 +1,5 @@
 {
   "uniqueId": "ranobe",
-  "description": "Type out random sentences from novels",
   "name": "Light Novel Typing Quiz",
   "article": "a",
   "instructions": "Type the below sentence as-is!",
@@ -14,6 +13,7 @@
   "commentFieldName": "Comment",
   "forceNoMC": true,
   "settingsGroup": "sentence_typing",
+  "description": "Type out random sentences from novels. [Created by darkgray#3591]",
   "cards": [
     {
       "question": "、この一字の違いはきわめて大きい",
