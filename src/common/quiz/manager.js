@@ -20,8 +20,6 @@ if (!state.quizManager) {
   state.quizManager = {
     currentActionForLocationId: {},
     sessionForLocationId: {},
-    reviewDeckForLocationId: {},
-    reviewDeckForUserId: {},
   };
 }
 

@@ -1,10 +1,10 @@
 const reload = require('require-reload')(require);
 const globals = require('./../globals.js');
+const deckLoader = require('./deck_loader.js');
 const Scores = reload('./scores.js');
 const state = require('./../static_state.js');
 const cardStrategies = reload('./card_strategies.js');
 const DeckCollection = reload('./deck_collection.js');
-const deckLoader = reload('./deck_loader.js');
 const gameModes = [
   reload('./normal_mode.js'),
   reload('./mastery_mode.js'),
@@ -13,10 +13,6 @@ const gameModes = [
 
 const LOGGER_TITLE = 'QUIZ';
 
-function createReviewDeck(unansweredCards) {
-  return deckLoader.createReviewDeck(unansweredCards);
-}
-
 function updateReviewDecks(locationId, sessionInformation) {
   try {
     let reviewDeckCreated = false;
@@ -24,19 +20,15 @@ function updateReviewDecks(locationId, sessionInformation) {
     for (let userId of users) {
       let unansweredCards = sessionInformation.getUnansweredCards(userId);
       if (unansweredCards.length > 0) {
-        state.quizManager.reviewDeckForUserId[userId] = createReviewDeck(unansweredCards);
+        deckLoader.registerUserReviewDeck(userId, unansweredCards);
         reviewDeckCreated = true;
-      } else {
-        delete state.quizManager.reviewDeckForUserId[userId];
       }
     }
 
     let cardsNoOneAnswered = sessionInformation.getUnansweredCards();
 
-    if (cardsNoOneAnswered.length <= 0) {
-      delete state.quizManager.reviewDeckForLocationId[locationId];
-    } else {
-      state.quizManager.reviewDeckForLocationId[locationId] = createReviewDeck(cardsNoOneAnswered);
+    if (cardsNoOneAnswered.length > 0) {
+      deckLoader.registerLocationReviewDeck(locationId, cardsNoOneAnswered);
       reviewDeckCreated = true;
     }
 

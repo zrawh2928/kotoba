@@ -2,6 +2,7 @@ const reload = require('require-reload')(require);
 const state = require('./../common/static_state.js');
 const assert = require('assert');
 const globals = require('./../common/globals.js');
+const deckLoader = require('../common/quiz/deck_loader.js');
 const { Permissions } = require('monochrome-bot');
 
 const quizManager = reload('./../common/quiz/manager.js');
@@ -14,7 +15,6 @@ const MasteryGameMode = reload('./../common/quiz/mastery_mode.js');
 const ConquestGameMode = reload('./../common/quiz/conquest_mode.js');
 const ReviewGameMode = reload('./../common/quiz/review_mode.js');
 const saveManager = reload('./../common/quiz/pause_manager.js');
-const deckLoader = reload('./../common/quiz/deck_loader.js');
 const DeckCollection = reload('./../common/quiz/deck_collection.js');
 const Session = reload('./../common/quiz/session.js');
 const trimEmbed = reload('./../common/util/trim_embed.js');
@@ -883,17 +883,23 @@ async function load(
 }
 
 async function deleteInternetDeck(msg, searchTerm, userId) {
-  const deletionResult = await deckLoader.deleteInternetDeck(searchTerm, userId);
-  if (deletionResult === deckLoader.DeletionStatus.DELETED) {
+  try {
+    await deckLoader.deleteDeck(searchTerm, userId);
     return msg.channel.createMessage('That deck was successfully deleted.', null, msg);
-  } else if (deletionResult === deckLoader.DeletionStatus.DECK_NOT_FOUND) {
-    return msg.channel.createMessage(`I didn't find a deck called ${searchTerm}. Did you type it wrong or has it already been deleted?`, null, msg);
-  } else if (deletionResult === deckLoader.DeletionStatus.USER_NOT_OWNER) {
-    return msg.channel.createMessage('You can\'t delete that deck because you didn\'t create it.', null, msg);
-  }
+  } catch (err) {
+    // TODO: Handle error
+    /*
+    if (deletionResult === deckLoader.DeletionStatus.DELETED) {
+      return msg.channel.createMessage('That deck was successfully deleted.', null, msg);
+    } else if (deletionResult === deckLoader.DeletionStatus.DECK_NOT_FOUND) {
+      return msg.channel.createMessage(`I didn't find a deck called ${searchTerm}. Did you type it wrong or has it already been deleted?`, null, msg);
+    } else if (deletionResult === deckLoader.DeletionStatus.USER_NOT_OWNER) {
+      return msg.channel.createMessage('You can\'t delete that deck because you didn\'t create it.', null, msg);
+    }
+    */
 
-  assert(false, 'Should have returned');
-  return undefined;
+    return undefined;
+  }
 }
 
 function createNonReviewGameMode(isMastery, isConquest) {
@@ -1070,28 +1076,33 @@ async function startNewQuiz(
   let gameMode;
   if (suffixReplaced.startsWith('reviewme')) {
     gameMode = ReviewGameMode;
-    decks = [getReviewDeckOrThrow(state.quizManager.reviewDeckForUserId[msg.author.id], prefix)];
+    decks = [await deckLoader.getUserReviewDeck(msg.author.id)];
   } else if (suffixReplaced.startsWith('review')) {
     gameMode = ReviewGameMode;
-    decks = [getReviewDeckOrThrow(state.quizManager.reviewDeckForLocationId[locationId], prefix)];
+    decks = [await deckLoader.getLocationReviewDeck(msg.channel.id)];
   } else {
     gameMode = createNonReviewGameMode(isMastery, isConquest);
 
-    const invokerName = msg.author.name + msg.author.discriminator;
-    const decksLookupResult = await deckLoader.getQuizDecks(
-      getDeckNameAndModifierInformation(deckNames),
-      invokerId,
-      invokerName,
-    );
-
-    if (decksLookupResult.status === deckLoader.DeckRequestStatus.DECK_NOT_FOUND) {
-      return msg.channel.createMessage(`I don't have a deck named **${decksLookupResult.notFoundDeckName}**. Say **${prefix}quiz** to see the decks I have!`, null, msg);
-    } else if (decksLookupResult.status === deckLoader.DeckRequestStatus.INDEX_OUT_OF_RANGE) {
-      return msg.channel.createMessage(`Something is wrong with the range for ${decksLookupResult.deckName}. The maximum range for that deck is (${decksLookupResult.allowedStart}-${decksLookupResult.allowedEnd})`);
-    } else if (decksLookupResult.status === deckLoader.DeckRequestStatus.ALL_DECKS_FOUND) {
-      ({ decks } = decksLookupResult);
-    } else {
-      assert(`Unknown deck lookup status: ${decksLookupResult.status}`);
+    const deckInformations = getDeckNameAndModifierInformation(deckNames);
+    
+    try {
+      // TODO: Handle deck modifiers (MC and indices)
+      const deckPromises = deckInformations.map(
+        info => deckLoader.getDeck(info.deckNameOrUniqueId));
+      decks = await Promise.all(deckPromises);
+    } catch (err) {
+      // TODO. Handle errors.
+      /*
+      if (decksLookupResult.status === deckLoader.DeckRequestStatus.DECK_NOT_FOUND) {
+        return msg.channel.createMessage(`I don't have a deck named **${decksLookupResult.notFoundDeckName}**. Say **${prefix}quiz** to see the decks I have!`, null, msg);
+      } else if (decksLookupResult.status === deckLoader.DeckRequestStatus.INDEX_OUT_OF_RANGE) {
+        return msg.channel.createMessage(`Something is wrong with the range for ${decksLookupResult.deckName}. The maximum range for that deck is (${decksLookupResult.allowedStart}-${decksLookupResult.allowedEnd})`);
+      } else if (decksLookupResult.status === deckLoader.DeckRequestStatus.ALL_DECKS_FOUND) {
+        ({ decks } = decksLookupResult);
+      } else {
+        assert(`Unknown deck lookup status: ${decksLookupResult.status}`);
+      }
+      */
     }
   }
 

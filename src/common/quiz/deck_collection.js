@@ -1,8 +1,8 @@
 const reload = require('require-reload')(require);
 const assert = require('assert');
+const deckLoader = require('./deck_loader.js');
 
 const cardStrategies = reload('./card_strategies.js');
-const deckLoader = reload('./deck_loader.js');
 const shuffleArray = reload('./../util/shuffle_array.js');
 
 const NUM_OPTIONS_FOR_MC = 5;
@@ -61,16 +61,14 @@ class DeckCollection {
   }
 
   static async createFromSaveData(saveData) {
-    const deckQueries = saveData.deckUniqueIds.map((uniqueId, index) => {
-      const mc = saveData.numberOfOptionsForDeck && !!saveData.numberOfOptionsForDeck[index];
-      return { deckNameOrUniqueId: uniqueId, mc };
-    });
+    // TODO: Load multiple choice decks correctly (forced and voluntary)
 
-    const deckLookupStatus = await deckLoader.getQuizDecks(deckQueries);
+    const deckPromises = saveData.deckUniqueIds.map(uniqueId => deckLoader.getDeck(uniqueId));
+    const decks = await Promise.all(deckPromises);
+
     const deckCollection = new DeckCollection();
-    deckCollection.decks = deckLookupStatus.decks;
+    deckCollection.decks = decks;
     deckCollection.initialCardCount = saveData.initialCardCount;
-    assert(deckCollection.decks, 'couldn\'t find a save deck by unique ID');
     deckCollection.indexSet = saveData.indexSet;
     deckCollection.name = saveData.name;
     deckCollection.nextCardId = saveData.nextCardId;
